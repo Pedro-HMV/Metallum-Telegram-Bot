@@ -38,10 +38,10 @@ class Band:
 
 class Bot:
     
-    updater = Updater(BOT_TOKEN)
-    dispatcher = updater.dispatcher
-    pm = telegram.ParseMode.MARKDOWN
-    pm2 = telegram.ParseMode.MARKDOWN_V2
+    updater: Updater
+    dispatcher: Updater.dispatcher
+    pm: telegram.ParseMode
+    pm2: telegram.ParseMode
 
 
     def start(self, update: Update, context: CallbackContext):
@@ -166,8 +166,8 @@ class Bot:
             if not context.args:
                 context.bot.send_message(chat_id=eci, text='Please provide at least one word after the command, like `/band slayer`', parse_mode=self.pm2)
             else:
-                try:
-                    # if not (re.search('[a-zA-Z]', context.args[0])):
+                # if not (re.search('[a-zA-Z]', context.args[0])):
+                if re.search(r'^\d+$', context.args[0]):
                     context.bot.send_message(chat_id=eci, text=f'Searching for a band with ID: *{context.args[0]}*', parse_mode=self.pm)
 
                     try:
@@ -180,17 +180,17 @@ class Bot:
                             text=str(band),
                             parse_mode=self.pm
                         )
-                    except ValueError:
+                    except ValueError as v:
+                        print(v)
                         context.bot.send_message(chat_id=eci, text='No band was found with that ID')
-                except TypeError as t:
-                    print (t)
 
                 try:
                     query = ' '.join(context.args).lower().title().replace('*','\*').replace('|','\|').replace('-','\-')
                     context.bot.send_message(chat_id=eci, text=f'Searching for bands named: *{query}*', parse_mode=self.pm)
                     self.search_bands(update, context, query, True, 0)
                     print("\n\nBand finished")
-                except IndexError:
+                except IndexError as i:
+                    print(i)
                     context.bot.send_message(chat_id=eci, text=u'No band was found with that name. Remember, I only know METAL bands! \U0001F918\U0001F916')
 
         except Exception as e:
@@ -228,7 +228,8 @@ class Bot:
                             #     if choice == 'no':
                             #         return
                     print("Bands finished")
-            except IndexError:
+            except IndexError as i:
+                print(i)
                 context.bot.send_message(chat_id=eci, text=u'No band was found. Remember, I only know METAL bands! \U0001F918\U0001F916')
 
         except Exception as e:
@@ -241,6 +242,11 @@ class Bot:
 #     return query.data
 
     def __init__(self):
+        self.updater = Updater(BOT_TOKEN)
+        self.dispatcher = self.updater.dispatcher
+        self.pm = telegram.ParseMode.MARKDOWN
+        self.pm2 = telegram.ParseMode.MARKDOWN_V2
+
         start_handler = CommandHandler('start', self.start)
         self.dispatcher.add_handler(start_handler)
 
@@ -258,3 +264,9 @@ class Bot:
 
         self.updater.start_polling()
         self.updater.idle()
+
+
+if __name__ == '__main__':
+    print('Starting')
+    bot = Bot()
+
