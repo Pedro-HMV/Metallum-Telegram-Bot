@@ -72,7 +72,7 @@ class Bot:
     dispatcher = updater.dispatcher
     pm = telegram.ParseMode.MARKDOWN_V2
 
-    def start(self, update: Update, context: CallbackContext):
+    def start(self, update: Update, context: CallbackContext) -> NoReturn:
         context.bot.send_message(
             chat_id=update.effective_chat.id,
             text="All hail the mighty *Encyclopaedia Metallum*\!\!\!\n\n"
@@ -88,7 +88,7 @@ class Bot:
             parse_mode=self.pm
         )
 
-    def help(self, update: Update, context: CallbackContext):
+    def help(self, update: Update, context: CallbackContext) -> NoReturn:
         eci = update.effective_chat.id
         help_command = context.args[0]
         if help_command == 'band':
