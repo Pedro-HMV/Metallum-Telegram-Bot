@@ -1,3 +1,5 @@
 .env
 pyrightconfig.json
 TODO.md
+/.idea
+/.idea/*
