@@ -257,9 +257,17 @@ class Bot:
         band_sep = escape_markdown("\n\n" + "*" * 30 + "\n\n")
         print(
             "User = "
-            + update.effective_user.username
+            + (
+                update.effective_user.username
+                if update.effective_user.username
+                else ""
+            )
             + ", "
-            + update.effective_user.full_name
+            + (
+                update.effective_user.full_name
+                if update.effective_user.full_name
+                else ""
+            )
             + "\n Query = "
             + query
         )
@@ -399,7 +407,9 @@ class Bot:
                         )
 
                 try:
+                    print(f"ARGS: {context.args}")
                     query = " ".join(context.args).lower().title()
+                    print(f"Initial query: {query}")
                     escaped_query = escape_markdown(query, version=2)
                     context.bot.send_message(
                         chat_id=eci,
