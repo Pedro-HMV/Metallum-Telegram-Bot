@@ -28,36 +28,33 @@ def map_markdown(s: str) -> str:
 
 
 class Band:
-    def __init__(self, band, albums: bool = True):
+    def __init__(self, band):
         escaped_band = self.escape_band(band)
         self.name: str = escaped_band["name"]
-        print(self.name)
+        # print(self.name)
         self.genres: str = escaped_band["genres"]
-        print(self.genres)
+        # print(self.genres)
         self.status: str = escaped_band["status"]
-        print(self.status)
+        # print(self.status)
         self.location: str = escaped_band["location"]
-        print(self.location)
+        # print(self.location)
         self.country: str = escaped_band["country"]
-        print(self.country)
+        # print(self.country)
         self.formed_in: str = escaped_band["formed_in"]
-        print(self.formed_in)
+        # print(self.formed_in)
         self.themes = escaped_band["themes"]
-        if albums:
-            full_albums = band.albums.search(type="full-length")
-            print("Full albums: " + str(full_albums))
-            string_albums: str = (
-                "This band has no full-length albums. Check their page below"
-                " for other releases."
-                if full_albums == []
-                else "\n".join(
-                    [f"({str(a.year)}) {a.title}" for a in full_albums]
-                )
-            )
-            self.albums = escape_markdown(string_albums, version=2)
-            print(self.albums)
+        full_albums = band.albums.search(type="full-length")
+        # print("Full albums: " + str(full_albums))
+        string_albums: str = (
+            "This band has no full-length albums. Check their page below"
+            " for other releases."
+            if full_albums == []
+            else "\n".join([f"({str(a.year)}) {a.title}" for a in full_albums])
+        )
+        self.albums = escape_markdown(string_albums, version=2)
+        # print(self.albums)
         self.url: str = escape_markdown(BASE_URL + band.url, version=2)
-        print(self.url)
+        # print(self.url)
         self._info: str = "\n\n".join(
             [
                 f"*{self.name}*",
@@ -66,7 +63,7 @@ class Band:
                 f"_FORMED IN_: {self.formed_in}",
                 f"_STATUS_: {self.status}",
                 f"_THEMES_: {self.themes}",
-                (f"_ALBUMS_: \n{self.albums}" if albums else ""),
+                f"_ALBUMS_: \n{self.albums}",
                 f"_PAGE_: {self.url}",
             ]
         ).replace("\n\n\n\n", "\n\n")
@@ -107,28 +104,24 @@ class Bot:
         self.dispatcher: Dispatcher = self.updater.dispatcher
         self.pm = ParseMode.MARKDOWN_V2
 
-        start_handler = CommandHandler("start", self.start)
+        start_handler = CommandHandler("start", self.start, run_async=True)
         self.dispatcher.add_handler(start_handler)
 
-        help_handler = CommandHandler("help", self.help)
+        help_handler = CommandHandler("help", self.help, run_async=True)
         self.dispatcher.add_handler(help_handler)
 
-        band_handler = CommandHandler("band", self.band)
+        band_handler = CommandHandler("band", self.band, run_async=True)
         self.dispatcher.add_handler(band_handler)
 
-        bands_handler = CommandHandler("bands", self.bands)
+        bands_handler = CommandHandler("bands", self.bands, run_async=True)
         self.dispatcher.add_handler(bands_handler)
 
-        albums_handler = CommandHandler("albums", self.albums)
-        self.dispatcher.add_handler(albums_handler)
-
-        stop_handler = CommandHandler("stop", self.stop)
-        self.dispatcher.add_handler(stop_handler)
+        # stop_handler = CommandHandler("stop", self.stop)
+        # self.dispatcher.add_handler(stop_handler)
 
         # button_handler = CallbackQueryHandler(self.button)
         # self.updater.dispatcher.add_handler(button_handler)
 
-        self.is_running: bool = False
         self.updater.start_polling()
         self.updater.idle()
 
@@ -250,122 +243,95 @@ class Bot:
         context: CallbackContext,
         query: str,
         strict: bool,
-        albums: bool = True,
         page_start: int = 0,
         bot_response: str = "",
     ) -> None:
         eci = update.effective_chat.id
         band_sep = escape_markdown("\n\n" + "*" * 30 + "\n\n")
-        print(
-            "User = "
-            + (
-                update.effective_user.username
-                if update.effective_user.username
-                else ""
-            )
-            + ", "
-            + (
-                update.effective_user.full_name
-                if update.effective_user.full_name
-                else ""
-            )
-            + "\n Query = "
-            + query
-        )
 
-        while self.is_running:
-            print(self.is_running)
-            try:
-                band_list = metallum.band_search(
-                    query, strict=strict, page_start=page_start
-                )
-                print(band_list)
-                if not band_list:
-                    raise IndexError
-                if page_start == 0 and band_list.result_count > 1:
-                    context.bot.send_message(
-                        chat_id=eci,
-                        text=(
-                            f"Found {band_list.result_count} bands. Please"
-                            " wait for all results to show up!"
-                        )
-                        + (
-                            ""
-                            if band_list.result_count < 15
-                            else "\nThis will take some time."
-                        ),
-                    )
-                for i in range(band_list.result_count):
-                    print("Bot respose: " + bot_response)
-                    band_result = band_list[i].get()
-                    print(band_result)
-                    band = Band(band_result, albums)
-                    print(band)
-                    band_to_add = "\n\n".join(
-                        [
-                            str(band),
-                            f"{i+1+page_start}/{band_list.result_count}",
-                        ]
-                    )
-                    print("Bot respose: " + bot_response)
-                    if bot_response:
-                        if (
-                            len(bot_response) + len(band_sep + band_to_add)
-                            <= MAX_MESSAGE_LENGTH
-                        ):
-                            bot_response += band_sep + band_to_add
-                        else:
-                            context.bot.send_message(
-                                chat_id=eci,
-                                text=bot_response,
-                                parse_mode=self.pm,
-                            )
-                            bot_response = "" + band_to_add
-                    else:
-                        bot_response += band_to_add
-                    # print(bot_response)
-
-                    print("ok")
-                    if (i + 1) % 200 == 0:
-                        self.search_bands(
-                            update,
-                            context,
-                            query,
-                            strict=strict,
-                            page_start=page_start + 200,
-                            bot_response=bot_response,
-                        )
-                        return
-                if bot_response:
-                    context.bot.send_message(
-                        chat_id=eci, text=bot_response, parse_mode=self.pm
-                    )
-                self.is_running = False
-                # if i < band_list.result_count and i % 10 == 0:
-                #     keyboard = [
-                #         [
-                #             InlineKeyboardButton("Yes",
-                #                                   callback_data='yes'),
-                #             InlineKeyboardButton("No",
-                #                                  callback_data='no')
-                #         ]
-                #     ]
-                #     reply_markup = InlineKeyboardMarkup(keyboard)
-                #     context.bot.send_message(
-                #         chat_id=eci,
-                #         text='Do you wish to go on?',
-                #         reply_markup=reply_markup
-                #     )
-                #     if reply_markup == 'no':
-                #         return
-            except IndexError:
+        try:
+            band_list = metallum.band_search(
+                query, strict=strict, page_start=page_start
+            )
+            if not band_list:
+                raise IndexError
+            if page_start == 0 and band_list.result_count > 1:
                 context.bot.send_message(
                     chat_id=eci,
                     text=(
-                        "No band was found with that name. Remember, I only"
-                        " know METAL bands! \U0001F918\U0001F916"
+                        f"Found {band_list.result_count} bands. Please"
+                        " wait for all results to show up!"
+                    )
+                    + (
+                        ""
+                        if band_list.result_count < 15
+                        else "\nThis will take some time."
                     ),
                 )
+            for i in range(band_list.result_count):
+                band_result = band_list[i].get()
+                band = Band(band_result)
+                print(band)
+                band_to_add = "\n\n".join(
+                    [
+                        str(band),
+                        f"{i+1+page_start}/{band_list.result_count}",
+                    ]
+                )
+                if bot_response:
+                    if (
+                        len(bot_response) + len(band_sep + band_to_add)
+                        <= MAX_MESSAGE_LENGTH
+                    ):
+                        bot_response += band_sep + band_to_add
+                    else:
+                        context.bot.send_message(
+                            chat_id=eci,
+                            text=bot_response,
+                            parse_mode=self.pm,
+                        )
+                        bot_response = "" + band_to_add
+                else:
+                    bot_response += band_to_add
+                if (i + 1) % 200 == 0:
+                    self.search_bands(
+                        update,
+                        context,
+                        query,
+                        strict=strict,
+                        page_start=page_start + 200,
+                        bot_response=bot_response,
+                    )
+                    return
+            if bot_response:
+                context.bot.send_message(
+                    chat_id=eci, text=bot_response, parse_mode=self.pm
+                )
+            # if i < band_list.result_count and i % 10 == 0:
+            #     keyboard = [
+            #         [
+            #             InlineKeyboardButton("Yes",
+            #                                   callback_data='yes'),
+            #             InlineKeyboardButton("No",
+            #                                  callback_data='no')
+            #         ]
+            #     ]
+            #     reply_markup = InlineKeyboardMarkup(keyboard)
+            #     context.bot.send_message(
+            #         chat_id=eci,
+            #         text='Do you wish to go on?',
+            #         reply_markup=reply_markup
+            #     )
+            #     if reply_markup == 'no':
+            #         return
+        except IndexError:
+            context.bot.send_message(
+                chat_id=eci,
+                text=(
+                    "No band was found with that name. Remember, I only"
+                    " know METAL bands! \U0001F918\U0001F916"
+                ),
+            )
 
     def band(self, update: Update, context: CallbackContext) -> NoReturn:
         eci = update.effective_chat.id
@@ -408,9 +374,23 @@ class Bot:
                         )
 
                 try:
-                    print(f"ARGS: {context.args}")
+                    print(f"\n\nCOMMAND: /band\tARGS: {context.args}")
                     query = " ".join(context.args).lower().title()
-                    print(f"Initial query: {query}")
+                    print(
+                        "User = "
+                        + (
+                            update.effective_user.username
+                            if update.effective_user.username
+                            else ""
+                        )
+                        + ", "
+                        + (
+                            update.effective_user.full_name
+                            if update.effective_user.full_name
+                            else ""
+                        )
+                        + f"\n Query = {query}\n\n"
+                    )
                     escaped_query = escape_markdown(query, version=2)
                     context.bot.send_message(
                         chat_id=eci,
@@ -462,7 +442,6 @@ class Bot:
                         .replace("\\|\\|", "or")
                         .replace("\\-", ", but not ")
                     )
-                    print(escaped_query)
                     context.bot.send_message(
                         chat_id=eci,
                         text=(
@@ -491,7 +470,7 @@ class Bot:
                     #     choice = input(reply_markup)
                     #     if choice == 'no':
                     #         return
-                    print("Bands finished")
+                    print("\n\nBands finished")
             except IndexError as i:
                 print(i)
                 context.bot.send_message(
@@ -512,89 +491,17 @@ class Bot:
                 ),
             )
 
-    def albums(self, update: Update, context: CallbackContext) -> NoReturn:
-        eci = update.effective_chat.id
-        self.is_running = True
-
-        try:
-            if not context.args:
-                context.bot.send_message(
-                    chat_id=eci,
-                    text=(
-                        "Please provide at least one word after the command,"
-                        " like `/albums slayer`"
-                    ),
-                    parse_mode=self.pm,
-                )
-            else:
-                if re.search(r"^\d+$", context.args[0]):
-                    context.bot.send_message(
-                        chat_id=eci,
-                        text=(
-                            "Searching for a band with ID: "
-                            f" *{context.args[0]}*"
-                        ),
-                        parse_mode=self.pm,
-                    )
-
-                    try:
-                        result = metallum.band_for_id(context.args[0])
-                        if result.id != context.args[0]:
-                            raise ValueError
-                        band = Band(result)
-                        context.bot.send_message(
-                            chat_id=eci, text=str(band), parse_mode=self.pm
-                        )
-                    except ValueError as v:
-                        print(v)
-                        context.bot.send_message(
-                            chat_id=eci,
-                            text="No band was found with that ID",
-                        )
-
-                try:
-                    query = " ".join(context.args).lower().title()
-                    escaped_query = escape_markdown(query, version=2)
-                    context.bot.send_message(
-                        chat_id=eci,
-                        text=f"Searching for bands named: *{escaped_query}*",
-                        parse_mode=self.pm,
-                    )
-                    self.search_bands(update, context, query, strict=True)
-                    print("\n\nBand finished")
-                except IndexError as i:
-                    print(i)
-                    context.bot.send_message(
-                        chat_id=eci,
-                        text=(
-                            "No band was found with that name. Remember, I"
-                            " only know METAL bands! \U0001F918\U0001F916"
-                        ),
-                    )
-
-        except Exception as e:
-            print(e)
-            context.bot.send_message(
-                chat_id=eci,
-                text=(
-                    "Something went wrong, please review your message and try"
-                    " again!"
-                ),
-            )
-
     # def kill_search(self):
     #     self.is_running = False
 
     # def stop(self, update: Update, context: CallbackContext) -> NoReturn:
     #     threading.Thread(target=self.kill_search).start()
 
-
-# def button(update: Update, context: CallbackContext):
-#     query = update.callback_query
-#     query.answer()
-#     return query.data
+    # def button(update: Update, context: CallbackContext):
+    #     query = update.callback_query
+    #     query.answer()
+    #     return query.data
 
 
 if __name__ == "__main__":
-    print("Starting")
     bot = Bot()
