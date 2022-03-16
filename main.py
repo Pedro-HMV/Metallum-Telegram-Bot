@@ -1,5 +1,6 @@
 import logging
-import threading
+
+# import threading
 import metallum
 import re
 from typing import NoReturn
@@ -581,11 +582,11 @@ class Bot:
                 ),
             )
 
-    def kill_search(self):
-        self.is_running = False
+    # def kill_search(self):
+    #     self.is_running = False
 
-    def stop(self, update: Update, context: CallbackContext) -> NoReturn:
-        threading.Thread(target=self.kill_search).start()
+    # def stop(self, update: Update, context: CallbackContext) -> NoReturn:
+    #     threading.Thread(target=self.kill_search).start()
 
 
 # def button(update: Update, context: CallbackContext):
