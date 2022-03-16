@@ -16,6 +16,8 @@ from telegram.utils.helpers import escape_markdown
 
 BOT_TOKEN = config("BOT_TOKEN")
 BASE_URL = "https://metal-archives.com/"
+BAND_SEP = escape_markdown("\n\n" + "*" * 30 + "\n\n", version=2)
+
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -103,6 +105,7 @@ class Bot:
         self.updater: Updater = Updater(BOT_TOKEN)
         self.dispatcher: Dispatcher = self.updater.dispatcher
         self.pm = ParseMode.MARKDOWN_V2
+        self.flags = {}
 
         start_handler = CommandHandler("start", self.start, run_async=True)
         self.dispatcher.add_handler(start_handler)
@@ -116,8 +119,8 @@ class Bot:
         bands_handler = CommandHandler("bands", self.bands, run_async=True)
         self.dispatcher.add_handler(bands_handler)
 
-        # stop_handler = CommandHandler("stop", self.stop)
-        # self.dispatcher.add_handler(stop_handler)
+        stop_handler = CommandHandler("stop", self.stop, run_async=True)
+        self.dispatcher.add_handler(stop_handler)
 
         # button_handler = CallbackQueryHandler(self.button)
         # self.updater.dispatcher.add_handler(button_handler)
@@ -239,103 +242,108 @@ class Bot:
 
     def search_bands(
         self,
-        update: Update,
+        eci,
         context: CallbackContext,
         query: str,
         strict: bool,
         page_start: int = 0,
         bot_response: str = "",
     ) -> None:
-        eci = update.effective_chat.id
-        band_sep = escape_markdown("\n\n" + "*" * 30 + "\n\n")
+        while self.flags[f"{eci}"]:
+            print("\n\n\n" + str(self.flags[f"{eci}"]) + "\n\n\n")
 
-        try:
-            band_list = metallum.band_search(
-                query, strict=strict, page_start=page_start
-            )
-            if not band_list:
-                raise IndexError
-            if page_start == 0 and band_list.result_count > 1:
+            try:
+                band_list = metallum.band_search(
+                    query, strict=strict, page_start=page_start
+                )
+                if not band_list:
+                    raise IndexError
+                if page_start == 0 and band_list.result_count > 1:
+                    context.bot.send_message(
+                        chat_id=eci,
+                        text=(
+                            f"Found {band_list.result_count} bands. Please"
+                            " wait for all results to show up!"
+                        )
+                        + (
+                            ""
+                            if band_list.result_count < 15
+                            else "\nThis will take some time."
+                        ),
+                    )
+                    if not self.flags[f"{eci}"]:
+                        break
+                for i in range(band_list.result_count):
+                    band_result = band_list[i].get()
+                    band = Band(band_result)
+                    print(band)
+                    band_to_add = "\n\n".join(
+                        [
+                            str(band),
+                            f"{i+1+page_start}/{band_list.result_count}",
+                        ]
+                    )
+                    if bot_response:
+                        if (
+                            len(bot_response) + len(BAND_SEP + band_to_add)
+                            <= MAX_MESSAGE_LENGTH
+                        ):
+                            bot_response += BAND_SEP + band_to_add
+                        else:
+                            context.bot.send_message(
+                                chat_id=eci,
+                                text=bot_response,
+                                parse_mode=self.pm,
+                            )
+                            bot_response = "" + band_to_add
+                    else:
+                        bot_response += band_to_add
+                    if not self.flags[f"{eci}"]:
+                        break
+                    if (i + 1) % 200 == 0:
+                        self.search_bands(
+                            eci,
+                            context,
+                            query,
+                            strict=strict,
+                            page_start=page_start + 200,
+                            bot_response=bot_response,
+                        )
+                        return
+                if bot_response:
+                    context.bot.send_message(
+                        chat_id=eci, text=bot_response, parse_mode=self.pm
+                    )
+                self.flags[f"{eci}"] = False
+
+                # if i < band_list.result_count and i % 10 == 0:
+                #     keyboard = [
+                #         [
+                #             InlineKeyboardButton("Yes",
+                #                                   callback_data='yes'),
+                #             InlineKeyboardButton("No",
+                #                                  callback_data='no')
+                #         ]
+                #     ]
+                #     reply_markup = InlineKeyboardMarkup(keyboard)
+                #     context.bot.send_message(
+                #         chat_id=eci,
+                #         text='Do you wish to go on?',
+                #         reply_markup=reply_markup
+                #     )
+                #     if reply_markup == 'no':
+                #         return
+            except IndexError:
                 context.bot.send_message(
                     chat_id=eci,
                     text=(
-                        f"Found {band_list.result_count} bands. Please"
-                        " wait for all results to show up!"
-                    )
-                    + (
-                        ""
-                        if band_list.result_count < 15
-                        else "\nThis will take some time."
+                        "No band was found with that name. Remember, I only"
+                        " know METAL bands! \U0001F918\U0001F916"
                     ),
                 )
-            for i in range(band_list.result_count):
-                band_result = band_list[i].get()
-                band = Band(band_result)
-                print(band)
-                band_to_add = "\n\n".join(
-                    [
-                        str(band),
-                        f"{i+1+page_start}/{band_list.result_count}",
-                    ]
-                )
-                if bot_response:
-                    if (
-                        len(bot_response) + len(band_sep + band_to_add)
-                        <= MAX_MESSAGE_LENGTH
-                    ):
-                        bot_response += band_sep + band_to_add
-                    else:
-                        context.bot.send_message(
-                            chat_id=eci,
-                            text=bot_response,
-                            parse_mode=self.pm,
-                        )
-                        bot_response = "" + band_to_add
-                else:
-                    bot_response += band_to_add
-                if (i + 1) % 200 == 0:
-                    self.search_bands(
-                        update,
-                        context,
-                        query,
-                        strict=strict,
-                        page_start=page_start + 200,
-                        bot_response=bot_response,
-                    )
-                    return
-            if bot_response:
-                context.bot.send_message(
-                    chat_id=eci, text=bot_response, parse_mode=self.pm
-                )
-            # if i < band_list.result_count and i % 10 == 0:
-            #     keyboard = [
-            #         [
-            #             InlineKeyboardButton("Yes",
-            #                                   callback_data='yes'),
-            #             InlineKeyboardButton("No",
-            #                                  callback_data='no')
-            #         ]
-            #     ]
-            #     reply_markup = InlineKeyboardMarkup(keyboard)
-            #     context.bot.send_message(
-            #         chat_id=eci,
-            #         text='Do you wish to go on?',
-            #         reply_markup=reply_markup
-            #     )
-            #     if reply_markup == 'no':
-            #         return
-        except IndexError:
-            context.bot.send_message(
-                chat_id=eci,
-                text=(
-                    "No band was found with that name. Remember, I only"
-                    " know METAL bands! \U0001F918\U0001F916"
-                ),
-            )
 
     def band(self, update: Update, context: CallbackContext) -> NoReturn:
         eci = update.effective_chat.id
-        self.is_running = True
 
         try:
             if not context.args:
@@ -397,7 +405,7 @@ class Bot:
                         text=f"Searching for bands named: *{escaped_query}*",
                         parse_mode=self.pm,
                     )
-                    self.search_bands(update, context, query, strict=True)
+                    self.search_bands(eci, context, query, strict=True)
                     print("\n\nBand finished")
                 except IndexError as i:
                     print(i)
@@ -421,7 +429,9 @@ class Bot:
 
     def bands(self, update: Update, context: CallbackContext) -> NoReturn:
         eci = update.effective_chat.id
-        self.is_running = True
+        if eci in self.flags:
+            del self.flags[f"{eci}"]
+        self.flags.update({f"{eci}": True})
 
         try:
 
@@ -451,7 +461,7 @@ class Bot:
                         ),
                         parse_mode=self.pm,
                     )
-                    self.search_bands(update, context, query, strict=False)
+                    self.search_bands(eci, context, query, strict=False)
                     # if i < band_list.result_count and i % 10 == 0:
                     #     keyboard = [
                     #         [
@@ -490,12 +500,22 @@ class Bot:
                     " again!"
                 ),
             )
+        del self.flags[f"{eci}"]
 
-    # def kill_search(self):
-    #     self.is_running = False
-
-    # def stop(self, update: Update, context: CallbackContext) -> NoReturn:
-    #     threading.Thread(target=self.kill_search).start()
+    def stop(self, update: Update, context: CallbackContext) -> NoReturn:
+        self.flags[f"{update.effective_chat.id}"] = False
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=(
+                "SHUTTING DOWN!\t\U0001F44B\U0001F916\n\n(You may still get"
+                " one more message with the results I've gathered so far.)"
+            ),
+        )
+        print(
+            "\n\n\n------------STOPPING"
+            " COMMAND------------\n\n\n"
+            f"{self.flags['' + str(update.effective_chat.id) + '']}"
+        )
 
     # def button(update: Update, context: CallbackContext):
     #     query = update.callback_query
