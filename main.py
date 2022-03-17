@@ -1,4 +1,5 @@
 import logging
+import time
 import metallum
 import re
 from typing import NoReturn
@@ -67,7 +68,7 @@ class Band:
                 f"_ALBUMS_: \n{self.albums}",
                 f"_PAGE_: {self.url}",
             ]
-        ).replace("\n\n\n\n", "\n\n")
+        )
 
     def __str__(self):
         return self._info
@@ -151,114 +152,132 @@ class Bot:
 
     def help(self, update: Update, context: CallbackContext) -> NoReturn:
         eci = update.effective_chat.id
-        if not context.args:
-            context.bot.send_message(
-                chat_id=eci,
-                text=(
-                    "To learn about advanced searches, please type ```\n/help"
-                    " band\n``` or ```\n/help bands\n```"
-                ),
-                parse_mode=PM,
-            )
-        else:
-            help_command = context.args[0]
-            if help_command == "band":
+        try:
+            if not context.args:
                 context.bot.send_message(
                     chat_id=eci,
                     text=(
-                        "*HOW TO USE* `/band`:\n\n When using this command,"
-                        " you can type the exact name of the band you wanna"
-                        " find\\.\nFor instance, if you want _Iron Maiden_,"
-                        " you should type `/band iron maiden`"
-                        " \\(capitalization doesn't matter, i\\.e\\., _iron"
-                        " maiden_ is the same as _iRoN MAidEn_\\)\\.\nYou can"
-                        " get multiple bands with this command, if they have"
-                        " the exact same name, but you will be able to"
-                        " differentiate them by location and genre\\(s\\) in"
-                        " the results\\.\n\nWith this command, it's also"
-                        " possible to look for a band by ID \\(the one used by"
-                        " Encyclopaedia Metallum, which is the number at the"
-                        " end of the band's page url\\)\\.\nTo do that, you"
-                        " just need to type a number \\(ID\\), instead of the"
-                        " name, like so: `/band 38492` which would give you"
-                        " the band with the very creative name _Inverted"
-                        " Pentagram_, for instance\\.\n\nBut that's not"
-                        " all\\!\nIn addition to searching for the ID, I will"
-                        " also look for bands with that exact number for a"
-                        " name \\(you know, just in case you're looking for"
-                        " the band called _13_, instead of the band with ID"
-                        " '13', for instance\\)\\.\n\nIf you include multiple"
-                        " numbers, or a number followed by more numbers and/or"
-                        " words, separated by spaces, I will only look for the"
-                        " first number as an ID, and then look for the whole"
-                        " message as a name\\.\nFor instance, `/band 7 sins`"
-                        " will have me look for the band with ID '7' \\(which"
-                        " would be _Entombed_\\), but also for the band named"
-                        " _7 Sins_\\.\n\nSo, now you can master the `/band`"
-                        " command by discovering every band with numbers for"
-                        " names, or something\\.\n*Get to work,"
-                        " METALHEAD\\!*\n\n\\(Remember, you can always stop"
-                        " ongoings searches with `/stop`\\)"
-                    ),
-                    parse_mode=PM,
-                )
-            elif help_command == "bands":
-                context.bot.send_message(
-                    chat_id=eci,
-                    text=(
-                        "*HOW TO USE* `/bands`:\n\nThis is the crazy"
-                        " command\\! Be prepared to get flooded with"
-                        " bands\\.\n\nYou give this command one or more words"
-                        " and I will find you all bands with all those words"
-                        " in their names, no matter the order\\!\nThat means"
-                        " `/bands black sabbath` will find _Black Sabbath_ and"
-                        " _Sabbath Black Heretic_\\.\n\nBut that's the *poser*"
-                        " way to use it\\. The *tr00* way would be something"
-                        " like `/bands hell`, which will give you upwards"
-                        " of\\.\\.\\.\n||You know what, try that one for"
-                        " yourself\\! \U0001F92D||\n\nBe aware that this looks"
-                        " for the actual separate words in the names, not for"
-                        " parts of words, meaning the above example will find"
-                        " _Alyson Hell_ and even _DisnneyHell_ \\(lmao\\), but"
-                        " won't find _Helloween_\\.\n\nYou can get even more"
-                        " comprehensive searches, though, with"
-                        " asterisks\\(\\*\\), pipes\\(\\|\\|\\) and"
-                        " dashes\\(\\-\\):\n\n`/bands hell*` will now give you"
-                        " bands that contain *any* words beginning with 'hell'"
-                        " \\(remember _Helloween_? You got it\\!\\)\n`/bands"
-                        " *iron` will give you bands that have words ending"
-                        " with 'iron', such as _Iron Maiden_ and"
-                        " _Apeiron_\\.\nFinally, `/bands *iron*` will give you"
-                        " bands that have 'iron' in any part of their names,"
-                        " like _Ironsword_ or _Dramatic Irony_\\.\n\n`/bands"
-                        " blind || guardian` will give you bands that have"
-                        " *either* the words 'blind' *or* 'guardian' \\(*or"
-                        " both*\\) in their names\\.\nNote that you can"
-                        " combine that with the __asterisks\\*__ explained"
-                        " above\\.\n\n`/bands black -sabbath` will give you"
-                        " all bands with the word 'black', but none of that"
-                        " 'sabbath' nonsense\\.\n\nFinally, and this should be"
-                        " obvious, you're not limited to two\\-word searches,"
-                        " so go ahead and do something like `/bands *crazy* ||"
-                        " *black* || *troll* || *from* || *hell*`, but you"
-                        " might wanna disable notifications 'cause I'm gonna"
-                        " be messaging you for a while\\!\n\nAnyways, now you"
-                        " can discover all those ~dorky~ *EPIC* bands with"
-                        " 'dragon' in their names\\. The fun is not SO FAR"
-                        " AWAY\\!\n\n\\(Remember, you can always stop ongoings"
-                        " searches with `/stop`\\)"
+                        "To learn about advanced searches, please type"
+                        " ```\n/help band\n``` or ```\n/help bands\n```"
                     ),
                     parse_mode=PM,
                 )
             else:
-                context.bot.send_message(
-                    chat_id=eci,
-                    text=(
-                        "I'm sorry, I can't help you with that!\nHave you"
-                        " tried `/help band` and `/help bands`?"
-                    ),
-                    parse_mode=PM,
-                )
+                help_command = context.args[0]
+                if help_command == "band":
+                    context.bot.send_message(
+                        chat_id=eci,
+                        text=(
+                            "*HOW TO USE* `/band`:\n\n When using this"
+                            " command, you can type the exact name of the band"
+                            " you wanna find\\.\nFor instance, if you want"
+                            " _Iron Maiden_, you should type `/band iron"
+                            " maiden` \\(capitalization doesn't matter,"
+                            " i\\.e\\., _iron maiden_ is the same as _iRoN"
+                            " MAidEn_\\)\\.\nYou can get multiple bands with"
+                            " this command, if they have the exact same name,"
+                            " but you will be able to differentiate them by"
+                            " location and genre\\(s\\) in the"
+                            " results\\.\n\nWith this command, it's also"
+                            " possible to look for a band by ID \\(the one"
+                            " used by Encyclopaedia Metallum, which is the"
+                            " number at the end of the band's page"
+                            " url\\)\\.\nTo do that, you just need to type a"
+                            " number \\(ID\\), instead of the name, like so:"
+                            " `/band 38492` which would give you the band with"
+                            " the very creative name _Inverted Pentagram_, for"
+                            " instance\\.\n\nBut that's not all\\!\nIn"
+                            " addition to searching for the ID, I will also"
+                            " look for bands with that exact number for a name"
+                            " \\(you know, just in case you're looking for the"
+                            " band called _13_, instead of the band with ID"
+                            " '13', for instance\\)\\.\n\nIf you include"
+                            " multiple numbers, or a number followed by more"
+                            " numbers and/or words, separated by spaces, I"
+                            " will only look for the first number as an ID,"
+                            " and then look for the whole message as a"
+                            " name\\.\nFor instance, `/band 7 sins` will have"
+                            " me look for the band with ID '7' \\(which would"
+                            " be _Entombed_\\), but also for the band named _7"
+                            " Sins_\\.\n\nSo, now you can master the `/band`"
+                            " command by discovering every band with numbers"
+                            " for names, or something\\.\n*Get to work,"
+                            " METALHEAD\\!*\n\n\\(Remember, you can always"
+                            " stop ongoings searches with `/stop`\\)"
+                        ),
+                        parse_mode=PM,
+                    )
+                elif help_command == "bands":
+                    context.bot.send_message(
+                        chat_id=eci,
+                        text=(
+                            "*HOW TO USE* `/bands`:\n\nThis is the crazy"
+                            " command\\! Be prepared to get flooded with"
+                            " bands\\.\n\nYou give this command one or more"
+                            " words and I will find you all bands with all"
+                            " those words in their names, no matter the"
+                            " order\\!\nThat means `/bands black sabbath` will"
+                            " find _Black Sabbath_ and _Sabbath Black"
+                            " Heretic_\\.\n\nBut that's the *poser* way to use"
+                            " it\\. The *tr00* way would be something like"
+                            " `/bands hell`, which will give you upwards"
+                            " of\\.\\.\\.\n||You know what, try that one for"
+                            " yourself\\! \U0001F92D||\n\nBe aware that this"
+                            " looks for the actual separate words in the"
+                            " names, not for parts of words, meaning the above"
+                            " example will find _Alyson Hell_ and even"
+                            " _DisnneyHell_ \\(lmao\\), but won't find"
+                            " _Helloween_\\.\n\nYou can get even more"
+                            " comprehensive searches, though, with"
+                            " asterisks\\(\\*\\), pipes\\(\\|\\|\\) and"
+                            " dashes\\(\\-\\):\n\n`/bands hell*` will now give"
+                            " you bands that contain *any* words beginning"
+                            " with 'hell' \\(remember _Helloween_? You got"
+                            " it\\!\\)\n`/bands *iron` will give you bands"
+                            " that have words ending with 'iron', such as"
+                            " _Iron Maiden_ and _Apeiron_\\.\nFinally, `/bands"
+                            " *iron*` will give you bands that have 'iron' in"
+                            " any part of their names, like _Ironsword_ or"
+                            " _Dramatic Irony_\\.\n\n`/bands blind ||"
+                            " guardian` will give you bands that have *either*"
+                            " the words 'blind' *or* 'guardian' \\(*or"
+                            " both*\\) in their names\\.\nNote that you can"
+                            " combine that with the __asterisks\\*__ explained"
+                            " above\\.\n\n`/bands black -sabbath` will give"
+                            " you all bands with the word 'black', but none of"
+                            " that 'sabbath' nonsense\\.\n\nFinally, and this"
+                            " should be obvious, you're not limited to"
+                            " two\\-word searches, so go ahead and do"
+                            " something like `/bands *crazy* || *black* ||"
+                            " *troll* || *from* || *hell*`, but you might"
+                            " wanna disable notifications 'cause I'm gonna be"
+                            " messaging you for a while\\!\n\nAnyways, now you"
+                            " can discover all those ~dorky~ *EPIC* bands with"
+                            " 'dragon' in their names\\. The fun is not SO FAR"
+                            " AWAY\\!\n\n\\(Remember, you can always stop"
+                            " ongoings searches with `/stop`\\)"
+                        ),
+                        parse_mode=PM,
+                    )
+                else:
+                    context.bot.send_message(
+                        chat_id=eci,
+                        text=(
+                            "I'm sorry, I can't help you with that\\!\nHave"
+                            " you tried `/help band` and `/help bands`?"
+                        ),
+                        parse_mode=PM,
+                    )
+        except Exception as e:
+            print(f"Exception in /help: {e}")
+            context.bot.send_message(
+                chat_id=eci,
+                text=(
+                    "YIKES! It looks like my creator did something wrong"
+                    " here.\n\nI'm sorry, this error should get fixed soon!   "
+                    " \U0001F91E\U0001F916"
+                ),
+            )
 
     def search_bands(
         self,
@@ -270,7 +289,6 @@ class Bot:
         bot_response: str = "",
     ) -> None:
         while self.flags[f"{eci}"]:
-            print("\n\n\n" + str(self.flags[f"{eci}"]) + "\n\n\n")
 
             try:
                 band_list = metallum.band_search(
@@ -356,8 +374,17 @@ class Bot:
     def band(self, update: Update, context: CallbackContext) -> NoReturn:
         eci = update.effective_chat.id
         if str(eci) in self.flags:
-            del self.flags[f"{eci}"]
-        self.flags.update({f"{eci}": True})
+            context.bot.send_message(
+                chat_id=eci,
+                text=(
+                    "Recalibrating from the previous"
+                    " search\\.\\.\\.\n\n*Please wait a moment\\!*"
+                    " \U0001F9BE\U0001F916"
+                ),
+                parse_mode=PM,
+            )
+            time.sleep(10)
+        self.flags[f"{eci}"] = True
 
         try:
             if not context.args:
@@ -389,7 +416,7 @@ class Bot:
                             chat_id=eci, text=str(band), parse_mode=PM
                         )
                     except ValueError as v:
-                        print(v)
+                        print(f"Value error in /band: {v}")
                         context.bot.send_message(
                             chat_id=eci,
                             text="No band was found with that ID",
@@ -422,7 +449,7 @@ class Bot:
                     self.search_bands(eci, context, query, strict=True)
                     print("\n\nBand finished")
                 except IndexError as i:
-                    print(i)
+                    print(f"IndexError in /band: {i}")
                     if self.flags[f"{eci}"]:
                         self.flags[f"{eci}"] = False
                         context.bot.send_message(
@@ -434,7 +461,7 @@ class Bot:
                         )
 
         except Exception as e:
-            print(e)
+            print(f"Exception in /band: {e}")
             context.bot.send_message(
                 chat_id=eci,
                 text=(
@@ -445,13 +472,21 @@ class Bot:
         try:
             del self.flags[f"{eci}"]
         except KeyError as k:
-            print(k)
+            print(f"KeyError in /band: {k}")
 
     def bands(self, update: Update, context: CallbackContext) -> NoReturn:
         eci = update.effective_chat.id
         if str(eci) in self.flags:
-            del self.flags[f"{eci}"]
-        self.flags.update({f"{eci}": True})
+            context.bot.send_message(
+                chat_id=eci,
+                text=(
+                    "Recalibrating from the previous search\\.\\.\\. *Please"
+                    " wait a moment\\!* \U0001F9BE\U0001F916"
+                ),
+                parse_mode=PM,
+            )
+            time.sleep(10)
+        self.flags[f"{eci}"] = True
 
         try:
 
@@ -466,15 +501,31 @@ class Bot:
                         parse_mode=PM,
                     )
                 else:
+                    print(f"\n\nCOMMAND: /bands\tARGS: {context.args}")
                     query = " ".join(context.args).lower().title()
+                    print(
+                        "User = "
+                        + (
+                            update.effective_user.username
+                            if update.effective_user.username
+                            else ""
+                        )
+                        + ", "
+                        + (
+                            update.effective_user.full_name
+                            if update.effective_user.full_name
+                            else ""
+                        )
+                        + f"\n Query = {query}\n\n"
+                    )
                     escaped_query = escape_markdown(query, version=2)
                     if (
                         re.search(r"\s-\S", query)
                         or re.search(
-                            r"(([\w\d]\\*)|(\\*[\w\d])|(\\*[\w\d]\\*))+",
+                            r"(([\w\d]\*)|(\*[\w\d])|(\*[\w\d]\*))+",
                             query,
                         )
-                        or re.search(r"\\s||\\s", query)
+                        or re.search(r"[\w\d]\s\|\|\s[\w\d]", query)
                     ):
                         context.bot.send_message(
                             chat_id=eci,
@@ -497,7 +548,7 @@ class Bot:
                     self.search_bands(eci, context, query, strict=False)
                     print("\n\nBands finished")
             except IndexError as i:
-                print(i)
+                print(f"IndexError in /bands: {i}")
                 if self.flags[f"{eci}"]:
                     self.flags[f"{eci}"] = False
                     context.bot.send_message(
@@ -509,7 +560,7 @@ class Bot:
                     )
 
         except Exception as e:
-            print(e)
+            print(f"Exception in /bands: {e}")
             context.bot.send_message(
                 chat_id=eci,
                 text=(
@@ -520,13 +571,13 @@ class Bot:
         try:
             del self.flags[f"{eci}"]
         except KeyError as k:
-            print(k)
+            print(f"KeyError in /bands: {k}")
 
     def stop(self, update: Update, context: CallbackContext) -> NoReturn:
         try:
             self.flags[f"{update.effective_chat.id}"] = False
         except Exception as e:
-            print(e)
+            print(f"Exception in /stop: {e}")
         context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=(
