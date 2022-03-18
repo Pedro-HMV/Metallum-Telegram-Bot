@@ -1,17 +1,18 @@
+import http
 import logging
-import time
-import metallum
 import re
+import time
 from typing import NoReturn
+
+import metallum
 from decouple import config
-from telegram import MAX_MESSAGE_LENGTH, Update, ParseMode
-from telegram.ext import (
-    Updater,
-    Dispatcher,
-    CallbackContext,
-    CommandHandler,
-)
+from flask import Flask, request
+from telegram import MAX_MESSAGE_LENGTH, ParseMode, Update
+from telegram.ext import CallbackContext, CommandHandler, Dispatcher, Updater
 from telegram.utils.helpers import escape_markdown
+from werkzeug.wrappers import Response
+
+app = Flask(__name__)
 
 BOT_TOKEN = config("BOT_TOKEN")
 BASE_URL = "https://metal-archives.com/"
@@ -124,8 +125,8 @@ class Bot:
         # button_handler = CallbackQueryHandler(self.button)
         # self.updater.dispatcher.add_handler(button_handler)
 
-        self.updater.start_polling()
-        self.updater.idle()
+        # self.updater.start_polling()
+        # self.updater.idle()
 
     def start(self, update: Update, context: CallbackContext) -> NoReturn:
         context.bot.send_message(
@@ -476,7 +477,7 @@ class Bot:
 
     def bands(self, update: Update, context: CallbackContext) -> NoReturn:
         eci = update.effective_chat.id
-        if str(eci) in self.flags:
+        if str(eci) in self.flags and not self.flags[f"{eci}"]:
             context.bot.send_message(
                 chat_id=eci,
                 text=(
@@ -593,5 +594,11 @@ class Bot:
     #     return query.data
 
 
-if __name__ == "__main__":
+@app.post("/")
+def index() -> Response:
     bot = Bot()
+    bot.dispatcher.process_update(
+        Update.de_json(request.get_json(force=True), bot)
+    )
+
+    return "", http.HTTPStatus.NO_CONTENT
