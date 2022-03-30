@@ -1,6 +1,6 @@
 .env
 pyrightconfig.json
-TODO.md
 /.idea
 /.idea/*
 .vscode/*
+venv
