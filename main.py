@@ -7,7 +7,7 @@ from typing import NoReturn
 import metallum
 from decouple import config
 from flask import Flask, request
-from telegram import MAX_MESSAGE_LENGTH, ParseMode, Update
+from telegram import MAX_MESSAGE_LENGTH, Bot, ParseMode, Update
 from telegram.ext import CallbackContext, CommandHandler, Dispatcher, Updater
 from telegram.utils.helpers import escape_markdown
 from werkzeug.wrappers import Response
@@ -101,10 +101,13 @@ class Band:
         return escaped_band
 
 
-class Bot:
+class MetallumBot:
     def __init__(self):
-        self.updater: Updater = Updater(BOT_TOKEN)
-        self.dispatcher: Dispatcher = self.updater.dispatcher
+        self.telegram_bot: Bot = Bot(token=BOT_TOKEN)
+        self.dispatcher: Dispatcher = Dispatcher(
+            bot=self.telegram_bot, update_queue=None
+        )
+
         self.flags = {}
 
         start_handler = CommandHandler("start", self.start, run_async=True)
@@ -596,7 +599,7 @@ class Bot:
 
 @app.post("/")
 def index() -> Response:
-    bot = Bot()
+    bot = MetallumBot()
     bot.dispatcher.process_update(
         Update.de_json(request.get_json(force=True), bot)
     )
