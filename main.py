@@ -8,7 +8,7 @@ import metallum
 from decouple import config
 from flask import Flask, request
 from telegram import MAX_MESSAGE_LENGTH, Bot, ParseMode, Update
-from telegram.ext import CallbackContext, CommandHandler, Dispatcher, Updater
+from telegram.ext import CallbackContext, CommandHandler, Dispatcher
 from telegram.utils.helpers import escape_markdown
 from werkzeug.wrappers import Response
 
@@ -34,20 +34,13 @@ class Band:
     def __init__(self, band):
         escaped_band = self.escape_band(band)
         self.name: str = escaped_band["name"]
-        # print(self.name)
         self.genres: str = escaped_band["genres"]
-        # print(self.genres)
         self.status: str = escaped_band["status"]
-        # print(self.status)
         self.location: str = escaped_band["location"]
-        # print(self.location)
         self.country: str = escaped_band["country"]
-        # print(self.country)
         self.formed_in: str = escaped_band["formed_in"]
-        # print(self.formed_in)
         self.themes = escaped_band["themes"]
         full_albums = band.albums.search(type="full-length")
-        # print("Full albums: " + str(full_albums))
         string_albums: str = (
             "This band has no full-length albums. Check their page below"
             " for other releases."
@@ -55,9 +48,7 @@ class Band:
             else "\n".join([f"({str(a.year)}) {a.title}" for a in full_albums])
         )
         self.albums = escape_markdown(string_albums, version=2)
-        # print(self.albums)
         self.url: str = escape_markdown(BASE_URL + band.url, version=2)
-        # print(self.url)
         self._info: str = "\n\n".join(
             [
                 f"*{self.name}*",
@@ -324,7 +315,7 @@ class MetallumBot:
                 for i in range(band_list.result_count):
                     band_result = band_list[i].get()
                     band = Band(band_result)
-                    print(band)
+
                     band_to_add = "\n\n".join(
                         [
                             str(band),
@@ -590,11 +581,6 @@ class MetallumBot:
             ),
         )
         print("\n\n\n------------STOPPING COMMAND------------\n\n\n")
-
-    # def button(update: Update, context: CallbackContext):
-    #     query = update.callback_query
-    #     query.answer()
-    #     return query.data
 
 
 @app.post("/")
