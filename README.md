@@ -15,7 +15,7 @@ Also available for Discord: https://github.com/Pedro-HMV/metallum-discord-bot.
 Python 3.8 is recommended for guaranteed compatibility.
 
 You also need to create a file named `.env` and store your bot's secret token in a variable there like so: `BOT_TOKEN="AIpodj83u1hsdahfoUHA:dashuioda.das1123.d281ue"`.  
-   - Replace the string inside quotes with you bot's token.
+   - Replace the string inside quotes with your bot's token.
 
 ## Usage
 1. Find the bot in Telegram by its username @MetalumBot (Metallum was taken) or via [this link](https://t.me/metalumbot).
