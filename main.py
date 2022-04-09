@@ -1,20 +1,16 @@
-import http
+import os
 import logging
 import re
 import time
 from typing import NoReturn
 
 import metallum
-from decouple import config
-from flask import Flask, request
 from telegram import MAX_MESSAGE_LENGTH, ParseMode, Update
 from telegram.ext import CallbackContext, CommandHandler, Dispatcher, Updater
 from telegram.utils.helpers import escape_markdown
-from werkzeug.wrappers import Response
 
-app = Flask(__name__)
 
-BOT_TOKEN = config("BOT_TOKEN")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 BASE_URL = "https://metal-archives.com/"
 BAND_SEP = escape_markdown("\n\n" + "*" * 30 + "\n\n", version=2)
 PM = ParseMode.MARKDOWN_V2
@@ -34,20 +30,13 @@ class Band:
     def __init__(self, band):
         escaped_band = self.escape_band(band)
         self.name: str = escaped_band["name"]
-        # print(self.name)
         self.genres: str = escaped_band["genres"]
-        # print(self.genres)
         self.status: str = escaped_band["status"]
-        # print(self.status)
         self.location: str = escaped_band["location"]
-        # print(self.location)
         self.country: str = escaped_band["country"]
-        # print(self.country)
         self.formed_in: str = escaped_band["formed_in"]
-        # print(self.formed_in)
         self.themes = escaped_band["themes"]
         full_albums = band.albums.search(type="full-length")
-        # print("Full albums: " + str(full_albums))
         string_albums: str = (
             "This band has no full-length albums. Check their page below"
             " for other releases."
@@ -55,9 +44,7 @@ class Band:
             else "\n".join([f"({str(a.year)}) {a.title}" for a in full_albums])
         )
         self.albums = escape_markdown(string_albums, version=2)
-        # print(self.albums)
         self.url: str = escape_markdown(BASE_URL + band.url, version=2)
-        # print(self.url)
         self._info: str = "\n\n".join(
             [
                 f"*{self.name}*",
@@ -101,10 +88,11 @@ class Band:
         return escaped_band
 
 
-class Bot:
+class MetallumBot:
     def __init__(self):
-        self.updater: Updater = Updater(BOT_TOKEN)
+        self.updater: Updater = Updater(token=BOT_TOKEN)
         self.dispatcher: Dispatcher = self.updater.dispatcher
+
         self.flags = {}
 
         start_handler = CommandHandler("start", self.start, run_async=True)
@@ -122,11 +110,8 @@ class Bot:
         stop_handler = CommandHandler("stop", self.stop, run_async=True)
         self.dispatcher.add_handler(stop_handler)
 
-        # button_handler = CallbackQueryHandler(self.button)
-        # self.updater.dispatcher.add_handler(button_handler)
-
-        # self.updater.start_polling()
-        # self.updater.idle()
+        self.updater.start_polling()
+        self.updater.idle()
 
     def start(self, update: Update, context: CallbackContext) -> NoReturn:
         context.bot.send_message(
@@ -321,7 +306,7 @@ class Bot:
                 for i in range(band_list.result_count):
                     band_result = band_list[i].get()
                     band = Band(band_result)
-                    print(band)
+
                     band_to_add = "\n\n".join(
                         [
                             str(band),
@@ -588,17 +573,6 @@ class Bot:
         )
         print("\n\n\n------------STOPPING COMMAND------------\n\n\n")
 
-    # def button(update: Update, context: CallbackContext):
-    #     query = update.callback_query
-    #     query.answer()
-    #     return query.data
 
-
-@app.post("/")
-def index() -> Response:
-    bot = Bot()
-    bot.dispatcher.process_update(
-        Update.de_json(request.get_json(force=True), bot)
-    )
-
-    return "", http.HTTPStatus.NO_CONTENT
+if __name__ == "__main__":
+    my_bot = MetallumBot()
