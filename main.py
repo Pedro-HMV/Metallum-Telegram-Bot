@@ -1,8 +1,9 @@
-import os
 import logging
 import re
 import time
 from typing import NoReturn
+
+from decouple import config
 
 import metallum
 from telegram import MAX_MESSAGE_LENGTH, ParseMode, Update
@@ -10,7 +11,7 @@ from telegram.ext import CallbackContext, CommandHandler, Dispatcher, Updater
 from telegram.utils.helpers import escape_markdown
 
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
+BOT_TOKEN = config("BOT_TOKEN")
 BASE_URL = "https://metal-archives.com/"
 BAND_SEP = escape_markdown("\n\n" + "*" * 30 + "\n\n", version=2)
 PM = ParseMode.MARKDOWN_V2
